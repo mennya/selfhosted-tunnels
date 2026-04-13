@@ -1,0 +1,37 @@
+# ============================================================
+# VPN — VLESS + REALITY (Xray via 3X-UI) + DuckDNS
+#
+# Start: docker compose up -d
+#
+# Initial setup:
+#   1. Open panel: http://localhost:2053
+#   2. Default login: admin / admin (change immediately!)
+#   3. Inbounds -> Add -> VLESS, port 8443, security: REALITY
+#      Dest: www.microsoft.com:443, SNI: www.microsoft.com
+#   4. Share the QR code with the client
+# ============================================================
+
+services:
+  3x-ui:
+    image: ghcr.io/mhsanaei/3x-ui:v2.8.11@sha256:34c46ea6d838df981c4760bd1fe442413c2b99bbe4bb49dfa3d1bfb8a8a92496
+    container_name: 3x-ui
+    ports:
+      - "127.0.0.1:2053:2053"  # Admin panel — localhost only
+      - "8443:8443/tcp"         # VLESS+REALITY — public
+    volumes:
+      - ./data/3x-ui:/etc/x-ui
+    environment:
+      - TZ=${TZ}
+    restart: unless-stopped
+    mem_limit: 256m
+
+  duckdns:
+    image: linuxserver/duckdns:latest@sha256:79c6ed0240c96fdc01013048e6f76a0eb0cac504d5f0739ca6a6875246aa6f26
+    container_name: duckdns
+    environment:
+      - TZ=${TZ}
+      - SUBDOMAINS=${DUCKDNS_SUBDOMAIN}
+      - TOKEN=${DUCKDNS_TOKEN}
+      - LOG_FILE=false
+    restart: unless-stopped
+    mem_limit: 64m
