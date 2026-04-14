@@ -20,7 +20,7 @@ services:
     volumes:
       - ./data/marzban:/var/lib/marzban
     ports:
-      - "127.0.0.1:8000:8000"              # Panel UI — localhost only (SSH tunnel)
+      - "${SERVER_IP}:8000:8000"             # Panel UI — self-signed cert, accept warning in browser
       - "${SERVER_IP}:443:443/tcp"          # VLESS+REALITY — public IP only
       - "${SERVER_IP}:62050:62050"          # Node API
       - "${SERVER_IP}:62051:62051"          # Node API (alternate)
