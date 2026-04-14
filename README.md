@@ -6,7 +6,8 @@ Docker Compose setups for self-hosted VPN and proxy services. Each directory is 
 
 | Directory | Stack | Use case |
 |-----------|-------|----------|
-| [`vless-reality/`](./vless-reality/) | 3X-UI + VLESS+REALITY + DuckDNS | Censorship-resistant VPN |
+| [`vless-reality/`](./vless-reality/) | 3X-UI + VLESS+REALITY + DuckDNS | Censorship-resistant VPN, single node |
+| [`marzban/`](./marzban/) | Marzban panel + node | Multi-node VPN, primary/secondary failover |
 
 ## Structure
 

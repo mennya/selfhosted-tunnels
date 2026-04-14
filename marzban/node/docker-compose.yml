@@ -1,0 +1,28 @@
+# ============================================================
+# Marzban Node — local machine (secondary/fallback)
+#
+# Start: docker compose up -d
+#
+# Setup:
+#   1. Start this node
+#   2. In Marzban panel → Nodes → Add Node
+#      - Address: <this machine's public IP or domain>
+#      - Port: 62050
+#      - API Port: 62051
+#      - Paste the panel's TLS certificate
+#   3. Add inbounds pointing to this node's IP
+# ============================================================
+
+services:
+  marzban-node:
+    image: gozargah/marzban-node:latest
+    container_name: marzban-node
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/var/lib/marzban-node
+    ports:
+      - "8443:8443/tcp"   # VLESS+REALITY inbound — public (match panel inbound port)
+      - "62050:62050"      # Node service port
+      - "62051:62051"      # Node API port
+    mem_limit: 256m
