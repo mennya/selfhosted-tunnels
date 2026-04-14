@@ -56,6 +56,6 @@ docker compose up -d
 ## Notes
 
 - Panel is on Hetzner (stable public IP) — manages all users and node connections
-- If local machine is behind CGNAT, you need a DuckDNS entry or port forwarding for ports `62050`/`62051` and `8443`
+- Local machine needs ports `8443`, `62050`, `62051` forwarded in your router. If you already run `vless-reality` locally, `8443` is done — add `62050`/`62051` for the node API
 - Marzban uses SQLite by default — sufficient for personal use; MariaDB option is in the compose if needed
 - Back up `panel/data/` (contains DB + Xray config)
