@@ -1,3 +1,5 @@
+[EN](./README.md) | [RU](./README.ru.md)
+
 # Marzban — Multi-node VPN Panel
 
 Primary/secondary setup using [Marzban](https://github.com/Gozargah/Marzban) panel + [Marzban Node](https://github.com/Gozargah/Marzban-node). Users get inbounds on both servers in a single config — clients failover automatically.

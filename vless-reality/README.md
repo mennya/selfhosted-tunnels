@@ -1,3 +1,5 @@
+[EN](./README.md) | [RU](./README.ru.md)
+
 # VLESS + REALITY via 3X-UI
 
 Self-hosted VPN using [3X-UI](https://github.com/MHSanaei/3x-ui) (Xray panel) with VLESS+REALITY transport and DuckDNS for dynamic DNS.
