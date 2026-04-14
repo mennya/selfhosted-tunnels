@@ -126,21 +126,10 @@ docker compose up -d
 
 ### V2Box
 
-Перейти в **Settings → Routing → Rules** и добавить два правила **перед** существующими:
-
-| Поле | Значение |
-|-------|-------|
-| Type | `geoip` |
-| Value | `ru` |
-| Outbound | `direct` |
-
-| Поле | Значение |
-|-------|-------|
-| Type | `geosite` |
-| Value | `ru` |
-| Outbound | `direct` |
-
-Или переключиться в режим **Custom** и вставить:
+1. Открыть V2Box → нижняя панель → **Settings** (иконка шестерёнки)
+2. Нажать **Routing**
+3. Нажать **Routing Mode** → выбрать **Custom**
+4. Нажать **Edit routing rules** → заменить содержимое на:
 
 ```json
 {
@@ -148,7 +137,12 @@ docker compose up -d
   "rules": [
     {
       "type": "field",
-      "ip": ["geoip:ru", "geoip:private"],
+      "ip": ["geoip:private"],
+      "outboundTag": "direct"
+    },
+    {
+      "type": "field",
+      "ip": ["geoip:ru"],
       "outboundTag": "direct"
     },
     {
@@ -160,23 +154,60 @@ docker compose up -d
 }
 ```
 
+5. Нажать **Save** → переподключиться
+
+> `domainStrategy: IPIfNonMatch` — если домен не совпадает ни с одним правилом, V2Box резолвит его в IP и проверяет IP-правила. Это позволяет поймать российские IP у сайтов без домена `.ru`.
+
+---
+
 ### Shadowrocket
 
-Перейти в **Config → Edit configuration** и добавить в секцию `[Rule]` **перед** `FINAL`:
+**Шаг 1 — включить маршрутизацию по правилам**
+
+На главном экране нажать на метку режима (показывает `PROXY`, `CONFIG` или `DIRECT`) → выбрать **CONFIG**.
+
+**Шаг 2 — открыть активный конфиг**
+
+Нижняя панель → вкладка **Config** → нажать на активный файл `.conf` (синяя галочка) → **Edit**
+
+**Шаг 3 — добавить правила**
+
+Найти секцию `[Rule]`. Добавить эти строки **в самое начало** секции, до всех существующих правил и до `FINAL`:
 
 ```
+# Российские IP — напрямую
 GEOIP,RU,DIRECT
+
+# Российские домены — напрямую
 RULE-SET,https://raw.githubusercontent.com/nicksyoshe/FreedomListVPN/main/shadowrocket-whitelist-ru.conf,DIRECT
+
+# Всё остальное — через VPN
 FINAL,PROXY
 ```
 
-Или через интерфейс: **Global Routing → Rule**, затем **Add Rule** → **GEOIP** → `RU` → `DIRECT`.
+Нажать **Save** в правом верхнем углу.
 
-### Что входит в `geosite:ru`
+**Шаг 4 — применить конфиг**
 
-Яндекс, ВКонтакте, Mail.ru, Сбер, Тинькофф, Госуслуги, Ozon, Wildberries и ~3000 других `.ru`-доменов. Обновляется автоматически при обновлении клиента.
+Вернуться на вкладку **Config** → нажать на конфиг → **Use Config**. Выключить и снова включить VPN.
 
-> Если российский сайт всё равно не работает напрямую — он блокирует иностранные IP на уровне CDN. Добавьте его домен вручную в правило `domain` → `direct`.
+> Если секции `[Rule]` нет вообще — добавить вручную. Минимальный конфиг выглядит так:
+> ```
+> [General]
+> [Rule]
+> GEOIP,RU,DIRECT
+> FINAL,PROXY
+> ```
+
+---
+
+### Что входит в `geosite:ru` / RULE-SET
+
+Яндекс, ВКонтакте, Mail.ru, Сбер, Тинькофф, Госуслуги, Ozon, Wildberries и тысячи других `.ru`-доменов. Обновляется автоматически — в V2Box при обновлении геобаз, в Shadowrocket при обновлении удалённого RULE-SET.
+
+> **Сайт всё равно идёт через VPN?** Возможно, у него не `.ru`-домен или CDN отдаёт не российские IP. Добавить вручную:
+> - V2Box: правило `"domain": ["domain:example.com"]` → `"outboundTag": "direct"`
+> - Shadowrocket: **Config → Rules → +** → Type: `DOMAIN-SUFFIX`, Value: `example.com`, Policy: `DIRECT`
 
 ---
 
