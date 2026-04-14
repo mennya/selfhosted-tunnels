@@ -126,88 +126,32 @@ Route Russian IPs and domains directly so banking apps, Yandex, VK, etc. work no
 
 ### V2Box
 
-1. Open V2Box → bottom bar → **Settings** (gear icon)
-2. Tap **Routing**
-3. Tap **Routing Mode** → select **Custom**
-4. Tap **Edit routing rules** → replace the content with:
+1. Bottom bar → **Settings** → **Routing** → **Routing Mode** → **Custom**
+2. Tap **Edit routing rules** → replace everything with:
 
 ```json
 {
   "domainStrategy": "IPIfNonMatch",
   "rules": [
-    {
-      "type": "field",
-      "ip": ["geoip:private"],
-      "outboundTag": "direct"
-    },
-    {
-      "type": "field",
-      "ip": ["geoip:ru"],
-      "outboundTag": "direct"
-    },
-    {
-      "type": "field",
-      "domain": ["geosite:ru"],
-      "outboundTag": "direct"
-    }
+    { "type": "field", "ip": ["geoip:private", "geoip:ru"], "outboundTag": "direct" },
+    { "type": "field", "domain": ["geosite:ru"], "outboundTag": "direct" }
   ]
 }
 ```
 
-5. Tap **Save** → reconnect
-
-> `domainStrategy: IPIfNonMatch` means V2Box resolves a domain to IP first if no domain rule matches, then checks IP rules. This catches Russian IPs that don't have a `.ru` domain.
+3. **Save** → reconnect
 
 ---
 
 ### Shadowrocket
 
-**Step 1 — switch to rule-based routing**
+1. Bottom bar → **Config** tab → tap the active `.conf` (blue checkmark) → **Rules**
+2. Tap **+** → fill in:
+   - Type: `GEOIP` · Value: `RU` · Policy: `DIRECT` → Save
+3. Make sure the new rule is **above** the `FINAL` rule (drag to reorder if needed)
+4. Tap **Global Routing** on the home screen → set to **Config**
 
-On the home screen, tap the routing mode label (shows `PROXY`, `CONFIG`, or `DIRECT`) → select **CONFIG**.
-
-**Step 2 — open the active config**
-
-Bottom bar → **Config** tab → tap the active `.conf` file (has a blue checkmark) → **Edit**
-
-**Step 3 — add rules**
-
-Find the `[Rule]` section. Add these lines **at the top** of that section, before any existing rules and before `FINAL`:
-
-```
-# Russian IPs — direct
-GEOIP,RU,DIRECT
-
-# Russian domains — direct
-RULE-SET,https://raw.githubusercontent.com/nicksyoshe/FreedomListVPN/main/shadowrocket-whitelist-ru.conf,DIRECT
-
-# Everything else — through VPN
-FINAL,PROXY
-```
-
-Tap **Save** in the top right.
-
-**Step 4 — reload config**
-
-Back on the **Config** tab → tap your config → **Use Config**. Toggle VPN off and on.
-
-> If you don't have a `[Rule]` section at all, add it manually. A minimal config looks like:
-> ```
-> [General]
-> [Rule]
-> GEOIP,RU,DIRECT
-> FINAL,PROXY
-> ```
-
----
-
-### What `geosite:ru` / the RULE-SET covers
-
-Yandex, VK, Mail.ru, Sber, Tinkoff, Gosuslugi, Ozon, Wildberries, and thousands of other `.ru` domains. Updated automatically when clients update geo databases (V2Box) or when Shadowrocket refreshes the remote RULE-SET.
-
-> **A site still routes through VPN?** It may have a non-`.ru` domain or a CDN that serves non-RU IPs. Add it manually:
-> - V2Box: add a `"domain": ["domain:example.com"]` rule → `"outboundTag": "direct"`
-> - Shadowrocket: **Config → Rules → +** → Type: `DOMAIN-SUFFIX`, Value: `example.com`, Policy: `DIRECT`
+> **A site still goes through VPN?** Add it manually: **Config → Rules → +** → Type: `DOMAIN-SUFFIX` · Value: `example.com` · Policy: `DIRECT`
 
 ---
 
