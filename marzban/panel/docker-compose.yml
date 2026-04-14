@@ -1,12 +1,14 @@
 # ============================================================
-# Marzban Panel — Hetzner (primary)
+# Marzban Panel — primary VPN node
 #
 # Start: docker compose up -d
 #
 # Initial setup:
-#   1. Create admin: docker compose exec marzban marzban-cli admin create --sudo
-#   2. Open panel: https://<your-domain>:443 (or http://<ip>:8000 initially)
-#   3. Add inbounds, then connect nodes via Nodes section
+#   1. Generate SSL certs (required — see README)
+#   2. Create admin: docker compose exec marzban marzban-cli admin create --sudo
+#      (or non-interactively via MARZBAN_ADMIN_PASSWORD env var)
+#   3. Access panel via SSH tunnel: ssh -L 8000:localhost:8000 user@server
+#      Then open https://localhost:8000/dashboard/
 # ============================================================
 
 services:
@@ -16,20 +18,10 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      - ./data:/var/lib/marzban
+      - ./data/marzban:/var/lib/marzban
     ports:
-      - "127.0.0.1:8000:8000"   # Panel UI — via reverse proxy or SSH tunnel
-      - "8443:8443/tcp"          # VLESS+REALITY inbound — public
-      - "62050:62050"            # Node API — for marzban-node connections
-      - "62051:62051"            # Node API (alternate)
+      - "127.0.0.1:8000:8000"              # Panel UI — localhost only (SSH tunnel)
+      - "${SERVER_IP}:443:443/tcp"          # VLESS+REALITY — public IP only
+      - "${SERVER_IP}:62050:62050"          # Node API
+      - "${SERVER_IP}:62051:62051"          # Node API (alternate)
     mem_limit: 512m
-
-  # Optional: uncomment if you want a dedicated DB instead of SQLite
-  # mariadb:
-  #   image: mariadb:lts
-  #   container_name: marzban-db
-  #   restart: unless-stopped
-  #   env_file: .env
-  #   volumes:
-  #     - ./data/mysql:/var/lib/mysql
-  #   mem_limit: 256m

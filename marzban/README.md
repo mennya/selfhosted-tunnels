@@ -14,48 +14,87 @@ Local machine (node/)     ← secondary inbound, auto-failover
 
 ### 1. Panel on Hetzner
 
+**SSL setup** (required — without this the panel binds to 127.0.0.1 only):
+
 ```bash
-cd panel
-cp .env.example .env
-# fill SECRET_KEY: openssl rand -hex 32
-docker compose up -d
-docker compose exec marzban marzban-cli admin create --sudo
+mkdir -p data/marzban/certs
+# Create a local CA
+openssl genrsa -out data/marzban/certs/ca.key 4096
+openssl req -new -x509 -days 3650 -key data/marzban/certs/ca.key \
+  -out data/marzban/certs/ca.pem -subj '/CN=marzban-ca'
+# Sign a server cert with it
+openssl genrsa -out data/marzban/certs/key.pem 4096
+openssl req -new -key data/marzban/certs/key.pem \
+  -out data/marzban/certs/server.csr -subj '/CN=marzban-panel'
+openssl x509 -req -days 3650 -in data/marzban/certs/server.csr \
+  -CA data/marzban/certs/ca.pem -CAkey data/marzban/certs/ca.key \
+  -CAcreateserial -out data/marzban/certs/cert.pem
 ```
 
-Access panel via SSH tunnel: `ssh -L 8000:localhost:8000 hetzner-vpn`  
-Then open `http://localhost:8000`
+**Start:**
 
-### 2. Node on local machine
+```bash
+cp .env.example .env
+# fill in SERVER_IP and SECRET_KEY (openssl rand -hex 32)
+docker compose up -d
+```
+
+**Create admin** (non-interactive):
+
+```bash
+MARZBAN_ADMIN_PASSWORD='yourpassword' \
+  docker exec -e MARZBAN_ADMIN_PASSWORD='yourpassword' marzban \
+  marzban-cli admin create -u admin --sudo
+```
+
+**Access panel** via SSH tunnel:
+
+```bash
+ssh -L 8000:localhost:8000 user@server
+```
+
+Then open **`https://localhost:8000/dashboard/`** (accept the cert warning — self-signed CA).
+
+### 2. Configure VLESS+REALITY inbound via API
+
+```bash
+# Get token
+TOKEN=$(curl -sk -X POST https://localhost:8000/api/admin/token \
+  -d 'username=admin&password=yourpassword' | jq -r .access_token)
+
+# Generate Reality keypair
+docker exec marzban xray x25519
+
+# Push inbound config (replace privateKey with generated value)
+curl -sk -X PUT https://localhost:8000/api/core/config \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d @xray_config.json
+```
+
+### 3. Node on local machine
 
 ```bash
 cd node
 cp .env.example .env
-# fill SERVICE_ADDRESS with your public IP or domain
+# fill SERVICE_ADDRESS with your DuckDNS domain
 docker compose up -d
 ```
 
-### 3. Connect node to panel
-
-1. Panel → **Settings → Nodes → Show Certificate** → copy cert
-2. Panel → **Nodes → Add Node**:
-   - Address: `<local public IP or domain>`
-   - Port: `62050`
-   - API Port: `62051`
-   - Paste the certificate
-3. Add inbounds for both Hetzner and local IPs
+In panel → **Nodes → Add Node**: address = DuckDNS domain, ports 62050/62051, paste panel cert.
 
 ## Ports
 
-| Port | Service | Where |
-|------|---------|-------|
-| `8000` | Panel UI | Hetzner (localhost only) |
-| `8443` | VLESS+REALITY | both |
-| `62050` | Node service | both |
-| `62051` | Node API | both |
+| Port | Purpose | Bound to |
+|------|---------|----------|
+| `8000` | Panel UI (HTTPS) | `127.0.0.1` (SSH tunnel only) |
+| `443` | VLESS+REALITY inbound | public IP only |
+| `62050` | Node service port | public IP only |
+| `62051` | Node API port | public IP only |
 
 ## Notes
 
-- Panel is on Hetzner (stable public IP) — manages all users and node connections
-- Local machine needs ports `8443`, `62050`, `62051` forwarded in your router. If you already run `vless-reality` locally, `8443` is done — add `62050`/`62051` for the node API
-- Marzban uses SQLite by default — sufficient for personal use; MariaDB option is in the compose if needed
-- Back up `panel/data/` (contains DB + Xray config)
+- Ports bound to `${SERVER_IP}` (not `0.0.0.0`) to avoid conflict with Tailscale which also binds to port 443 on its own interface
+- Panel uses a CA-signed cert (not bare self-signed) — Marzban rejects bare self-signed certs
+- Local node needs ports `8443`, `62050`, `62051` forwarded in your router; DuckDNS handles dynamic IP
+- Back up `panel/data/marzban/` — contains DB, Xray config, and certs
